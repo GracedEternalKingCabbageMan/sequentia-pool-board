@@ -40,9 +40,13 @@ The node side of the same contract is asserted in
 
 ```
 python3 test_pool_board_server.py
+node test_page_render.mjs
 ```
 
-No network and no node required. Run them before every push; there is no CI here and the
+The second one runs the page's own JavaScript over a feed in a minimal DOM, because
+grepping the page for field names catches a rename but not a page that throws halfway
+through building the table. Add a case to its fixture whenever you add a state the page
+renders differently. No network and no node required. Run them before every push; there is no CI here and the
 page is public.
 
 ## Deploy

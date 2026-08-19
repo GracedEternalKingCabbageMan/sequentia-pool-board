@@ -42,14 +42,14 @@ viewer at once while `listpools` walks the whole stake registry: a crowd arrivin
 costs the node one call, not one each.
 
 ```
-SEQ_RPC_COOKIE=/root/sequentia/pool-board-node/test/.cookie \
+SEQ_RPC_COOKIE=/root/sequentia/pool-board-node/testnet3/.cookie \
 SEQ_POOLS_PORT=8091 python3 pool-board-server.py
 ```
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `SEQ_RPC_URL` | `http://127.0.0.1:7041` | node RPC endpoint |
-| `SEQ_RPC_COOKIE` | *(none)* | path to the node's `.cookie` (preferred) |
+| `SEQ_RPC_COOKIE` | *(none)* | path to the node's `.cookie` (preferred). On `chain=test` the node writes it to `<datadir>/testnet3/.cookie`, not `<datadir>/test/`. |
 | `SEQ_RPC_USER` / `SEQ_RPC_PASSWORD` | *(none)* | RPC credentials, when not using a cookie |
 | `SEQ_POOLS_WINDOW` | `500` | blocks to measure production reliability over |
 | `SEQ_POOLS_TTL` | `15` | seconds to cache the answer for |
@@ -80,10 +80,20 @@ state and can be restarted freely.
 ## Tests
 
 ```
-python3 test_pool_board_server.py
+python3 test_pool_board_server.py   # the feed
+node test_page_render.mjs           # the page, rendered against a fixture
+node test_page_render.mjs --live    # ...and against the deployed feed
 ```
 
-Covers the routes, the cache (including that a burst of concurrent viewers costs one
+`test_page_render.mjs` runs the page's own JavaScript over a feed in a minimal DOM and
+checks what came out: one row per pool, nothing rendering as `undefined` or `NaN`, a pool
+with no committed policy still saying it keeps everything, a pool producing nothing showing
+its zero, a pool owed nothing NOT being called unreliable, and an announced change reaching
+the top of the page with a deadline. Grepping the page for field names catches a rename;
+this catches a page that throws halfway through building the table, which a browser shows
+as a half-drawn board and reports nowhere.
+
+The Python tests cover the routes, the cache (including that a burst of concurrent viewers costs one
 upstream call), error handling, that no caller input can reach the node, and that the feed
 carries every field [`index.html`](index.html) renders. That last one is the point: a rename
 on either side fails the test rather than silently emptying a column on a public page.
