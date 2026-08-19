@@ -28,8 +28,8 @@ const FIXTURE = {
   notice_blocks: 1440,
   block_seconds: 60,
   window: 500,
-  declared_pools: 1,
-  stakers: 3,
+  declared_pools: 2,
+  stakers: 4,
   generated_at: Math.floor(Date.now() / 1000),
   pools: [
     {
@@ -40,7 +40,9 @@ const FIXTURE = {
       blocks_produced: 310, blocks_expected: 312.5, reliability: 0.992,
       payout: 'pays one delegator per block, drawn by stake weight ... commission 5.00%',
       policy_in_force: { activation: 90000, mode: 'lottery', commission_bp: 500 },
-      policy_pending: [{ activation: 99000, mode: 'lottery', commission_bp: 1000, blocks_away: 3000 }],
+      policy_pending: [{ activation: 99000, mode: 'split', commission_bp: 1000, blocks_away: 3000 }],
+      pot: {},
+      pot_outputs: 0,
     },
     {
       // A staker producing for itself: carried by the feed so a wallet can look
@@ -52,6 +54,18 @@ const FIXTURE = {
       blocks_produced: 0, blocks_expected: 125.0, reliability: 0,
       payout: 'no policy committed: this pool keeps everything the blocks it produces earn',
       policy_pending: [],
+    },
+    {
+      signer: '03' + '12'.repeat(32),
+      declared: true,
+      weight: 1000000000000, own_weight: 500000000000, delegated_weight: 500000000000,
+      delegators: 2, network_share: 0.125, eligible: true, committee_ready: true,
+      blocks_produced: 60, blocks_expected: 62.5, reliability: 0.96,
+      payout: 'pays every delegator its exact proportional share (split): rewards pool up on-chain and anyone may trigger the payout, operator commission 2.00%. The proportional payout most delegators expect',
+      policy_in_force: { activation: 91000, mode: 'split', commission_bp: 200 },
+      policy_pending: [],
+      pot: { ['5a'.repeat(32)]: 0.00012345 },
+      pot_outputs: 3,
     },
     {
       signer: '02' + 'ef'.repeat(32),
@@ -132,6 +146,15 @@ if (declaredPools.some(p => (p.policy_pending || []).length)) {
   check(/blocks \(about /.test(pending), 'the pending change carries a deadline');
 }
 
+// The split mode must render as itself, never fall through to "direct".
+if (declaredPools.some(p => (p.policy_pending||[]).some(q => q.mode === 'split'))) {
+  check(pending.includes('proportional split'), 'a pending split policy is named, not called direct');
+}
+if (declaredPools.some(p => p.policy_in_force && p.policy_in_force.mode === 'split')) {
+  check(rows.includes('proportional share'), "a split pool's payout line renders");
+}
+check(api.policyLine({mode:'split', commission_bp: 200}) === 'proportional split, 2.00% commission',
+  'policyLine knows the split mode');
 check(/blocks \(about /.test(api.whenBinds(1440, feed.block_seconds)), 'whenBinds renders a deadline');
 check(api.seq(100000000) === '1', 'seq() renders 1e8 atoms as 1');
 
