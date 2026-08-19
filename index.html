@@ -1,0 +1,288 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sequentia: staking pools</title>
+<link rel="icon" href="/explorer/img/icons/SequentiaTestnet-menu-logo.svg">
+<style>
+  :root{color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0f1216;color:#e8eaed}
+  .wrap{max-width:1180px;margin:0 auto;padding:40px 24px 64px}
+  .brand{display:flex;align-items:center;gap:14px;margin:0 0 8px}
+  .brand img{height:52px;width:52px}
+  h1{font-size:30px;margin:0} h1 .t{color:#f5b301}
+  .sub{color:#9aa0a6;margin:0 0 28px;max-width:70ch}
+  a{color:#f5b301}
+  h2{font-size:20px;margin:34px 0 12px}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:24px}
+  .stat{background:#171b21;border:1px solid #262b33;border-radius:12px;padding:14px 16px}
+  .stat .k{color:#9aa0a6;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  .stat .v{font-size:22px;font-weight:600;margin-top:2px}
+  .stat .n{color:#6b7280;font-size:12px}
+
+  .notice{background:#2a2110;border:1px solid #6b5312;border-radius:12px;padding:16px 18px;margin-bottom:24px}
+  .notice h3{margin:0 0 8px;font-size:16px;color:#f5b301}
+  .notice ul{margin:0;padding-left:20px} .notice li{margin:6px 0}
+  .notice .cd{color:#f5b301;font-weight:600}
+
+  .bar{background:#0f1216;border:1px solid #262b33;border-radius:12px;overflow-x:auto}
+  table{border-collapse:collapse;width:100%;min-width:900px;font-size:14px}
+  th{text-align:left;padding:12px 14px;color:#9aa0a6;font-weight:600;font-size:12px;text-transform:uppercase;
+     letter-spacing:.04em;border-bottom:1px solid #262b33;white-space:nowrap;cursor:pointer;user-select:none}
+  th:hover{color:#f5b301}
+  th.na{cursor:default} th.na:hover{color:#9aa0a6}
+  td{padding:12px 14px;border-bottom:1px solid #1c2027;vertical-align:top}
+  tr.row:hover{background:#151a20}
+  tr.row{cursor:pointer}
+  .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  th.num{text-align:right}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .key{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px}
+  .muted{color:#6b7280}
+  .meter{height:5px;background:#262b33;border-radius:3px;margin-top:5px;overflow:hidden;min-width:70px}
+  .meter i{display:block;height:100%;background:#f5b301}
+  .badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:20px;border:1px solid #333a45;
+         color:#9aa0a6;white-space:nowrap;margin-right:4px}
+  .b-warn{border-color:#6b5312;background:#2a2110;color:#f5b301}
+  .b-bad{border-color:#5a2b2b;background:#2a1414;color:#e88}
+  .b-ok{border-color:#24503a;background:#122019;color:#7ddba4}
+  .detail{background:#12161b}
+  .detail td{padding:16px 18px}
+  .dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
+  .dgrid h4{margin:0 0 6px;font-size:13px;color:#9aa0a6;text-transform:uppercase;letter-spacing:.04em}
+  pre{background:#0b0e12;border:1px solid #262b33;border-radius:8px;padding:10px 12px;overflow-x:auto;
+      font-size:13px;margin:6px 0 0}
+  .hide{display:none}
+  .status{color:#6b7280;font-size:13px;margin:10px 0 0}
+  .err{color:#e88}
+  .explain{background:#171b21;border:1px solid #262b33;border-radius:12px;padding:20px 22px;margin-top:12px}
+  .explain p{margin:0 0 12px;max-width:78ch} .explain p:last-child{margin-bottom:0}
+  .explain strong{color:#fff}
+  footer{margin-top:40px;border-top:1px solid #262b33;padding-top:20px;color:#6b7280;font-size:13px}
+</style></head><body><div class="wrap">
+
+  <div class="brand">
+    <img src="/explorer/img/icons/SequentiaTestnet-menu-logo.svg" alt="Sequentia">
+    <h1>Staking <span class="t">pools</span></h1>
+  </div>
+  <p class="sub">Every signer producing blocks on the Sequentia network, the stake weight it commands, who lent
+  it, what it has committed on-chain to paying, and how reliably it actually produces. A pool never holds your
+  coins, so what you are choosing here is a block producer, not a custodian.</p>
+
+  <div class="stats" id="stats"></div>
+  <div id="pending"></div>
+
+  <h2>Pools</h2>
+  <div class="bar">
+    <table id="tbl">
+      <thead><tr>
+        <th data-sort="signer" class="na">Pool</th>
+        <th data-sort="weight" class="num">Weight</th>
+        <th data-sort="delegated_weight" class="num">Lent to it</th>
+        <th data-sort="delegators" class="num">Delegators</th>
+        <th data-sort="reliability" class="num">Reliability</th>
+        <th data-sort="payout" class="na">Pays out</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <p class="status" id="status">Loading…</p>
+
+  <h2>What a pool can and cannot do</h2>
+  <div class="explain">
+    <p><strong>It can never spend your coins.</strong> Delegating does not move your stake and does not put the
+    pool's key anywhere near it. Your staking output keeps exactly one spending condition, your own key. What you
+    lend sits in a separate little record naming you and the pool, and while that record is unspent the network
+    counts your weight for the pool and expects the pool to sign the blocks.</p>
+    <p><strong>You can leave whenever you like.</strong> Only your key can spend that record, so reclaiming needs
+    nobody's cooperation and nobody's permission. There is no lock, no queue and no notice period on leaving. The
+    weight is yours again the moment the reclaim confirms.</p>
+    <p><strong>What you are trusting a pool for is the reward, and only the reward.</strong> Blocks pay their fees
+    to whoever produced them. A pool that has committed to nothing on-chain keeps all of it, and that is the
+    default rather than an abuse. Read the "Pays out" column before you delegate, and keep reading it afterwards.</p>
+    <p><strong>A committed policy cannot change behind your back.</strong> Any change has to be announced on-chain
+    a fixed number of blocks before it can bind, and every announcement in that window is shown at the top of this
+    page and inside your own wallet. That waiting period is worth exactly as much as the attention you pay to it,
+    which is why leaving is instant: you are meant to have time to read, decide and go.</p>
+    <p><strong>The two committed modes differ in what they guarantee.</strong> A <em>direct</em> policy names an
+    address that every block must pay, so the operator cannot silently redirect the reward, but the chain does not
+    check that the address shares anything with you. A <em>lottery</em> policy makes each block pay one delegator
+    drawn by stake weight from a seed rooted in Bitcoin's proof of work, so the draw cannot be rigged and your
+    share over time is exactly proportional, at the cost of arriving in occasional lumps instead of steadily.</p>
+    <p><strong>Reliability is the number nobody advertises.</strong> A pool holding a tenth of the network's stake
+    should produce about a tenth of the blocks. Well under that means it is offline, missing its slots or losing
+    races, and its delegators are earning nothing for the weight they lent it.</p>
+  </div>
+
+  <h2>Joining a pool</h2>
+  <div class="explain">
+    <p>From the desktop wallet, open the Staking tab, pick a pool in the "Staking pool" card and click Delegate.
+    From a node, with the pool's signer key from the table above:</p>
+    <pre>sequentia-cli delegatestake "&lt;signer public key&gt;"</pre>
+    <p>Check what you are joining, and what it has announced, before and after:</p>
+    <pre>sequentia-cli listpools          # this page, from your own node
+sequentia-cli listdelegations    # where your stake signs, and any pending change</pre>
+    <p>And to leave, at any moment, without asking anyone:</p>
+    <pre>sequentia-cli undelegatestake</pre>
+    <p class="muted">Delegating requires a registered stake. It does not require your wallet to be online
+    afterwards, which is the other reason pools exist: the key that can move your coins never has to touch a
+    block-producing server.</p>
+  </div>
+
+  <footer>
+    <div style="margin-bottom:8px">
+      <a href="/">Home</a> · <a href="/explorer/">Explorer</a> · <a href="/wallet/">Web Wallet</a> ·
+      <a href="/download/">Downloads</a>
+    </div>
+    Testnet only; assets carry no value. This page is read-only and reads a Sequentia node directly.
+  </footer>
+</div>
+
+<script>
+// The board is a rendering of one RPC, listpools, and holds no state of its own
+// beyond the sort order and which row is expanded.
+const FEED = '/pools/pools.json';
+const REFRESH_MS = 30000;
+let DATA = null, SORT = {key:'weight', desc:true}, OPEN = null;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const shortKey = k => k.slice(0, 10) + '…' + k.slice(-6);
+
+// Weight is atoms of the Sequence token (SEQ), 1 SEQ = 1e8 atoms.
+function seq(atoms){
+  const v = Number(atoms) / 1e8;
+  if (v >= 1e6) return (v/1e6).toFixed(2).replace(/\.?0+$/,'') + 'M';
+  if (v >= 1e3) return Math.round(v).toLocaleString('en-US');
+  return v.toLocaleString('en-US', {maximumFractionDigits: 2});
+}
+const pct = x => (x*100).toFixed(x >= 0.1 ? 1 : 2) + '%';
+
+// "in 1,240 blocks (about 20 Aug, 14:05)". A height is only a date by way of the
+// chain's cadence, so say "about" and mean it.
+function whenBinds(blocksAway, blockSeconds){
+  const when = new Date(Date.now() + blocksAway * blockSeconds * 1000);
+  const day = when.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+  const time = when.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+  return `${blocksAway.toLocaleString('en-US')} blocks (about ${day}, ${time})`;
+}
+
+function policyLine(p){
+  if (p.mode === 'lottery') return `lottery, ${(p.commission_bp/100).toFixed(2)}% commission`;
+  return `direct, pays a committed script`;
+}
+
+function render(){
+  if (!DATA) return;
+  const d = DATA, pools = d.pools || [];
+
+  $('stats').innerHTML = [
+    ['Pools', pools.length, 'signers commanding weight or committed to a policy'],
+    ['Network stake', seq(d.network_weight) + ' SEQ', 'total weight backing block production'],
+    ['Minimum to produce', seq(d.min_stake) + ' SEQ', 'weight a signer needs to be eligible'],
+    ['Notice period', (d.notice_blocks||0).toLocaleString('en-US') + ' blocks',
+     'warning before a payout change can bind'],
+    ['Chain height', (d.height||0).toLocaleString('en-US'),
+     d.window ? `reliability over the last ${d.window} blocks` : 'reliability not measured'],
+  ].map(([k,v,n]) => `<div class="stat"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div>
+    <div class="n">${esc(n)}</div></div>`).join('');
+
+  // Announced changes still inside their notice window. This is the audit
+  // surface the notice period exists for, so it goes above the table, not in it.
+  const changing = pools.filter(p => (p.policy_pending||[]).length);
+  $('pending').innerHTML = !changing.length ? '' :
+    `<div class="notice"><h3>Announced changes you can still act on</h3><ul>` +
+    changing.map(p => (p.policy_pending||[]).map(q =>
+      `<li><span class="key">${esc(shortKey(p.signer))}</span> will switch to
+       <strong>${esc(policyLine(q))}</strong> in
+       <span class="cd">${esc(whenBinds(q.blocks_away, d.block_seconds||60))}</span>.
+       ${p.delegators ? `${p.delegators} delegator(s) can leave before it binds.` : ''}</li>`
+    ).join('')).join('') +
+    `</ul></div>`;
+
+  const sorted = pools.slice().sort((a,b) => {
+    const k = SORT.key;
+    // A pool that was owed nothing has no reliability rather than a zero, so
+    // sort those to the bottom either way instead of pretending they scored 0.
+    const av = a[k] === undefined ? -1 : a[k], bv = b[k] === undefined ? -1 : b[k];
+    if (av === bv) return a.signer < b.signer ? -1 : 1;
+    return (SORT.desc ? 1 : -1) * (av < bv ? 1 : -1);
+  });
+
+  $('rows').innerHTML = sorted.map(p => {
+    const rel = p.reliability;
+    const relCell = rel === undefined ? '<span class="muted">not owed any</span>' :
+      `${rel.toFixed(2)}<div class="meter"><i style="width:${Math.min(100, rel*100)}%"></i></div>
+       <span class="muted">${p.blocks_produced} of ${p.blocks_expected.toFixed(1)}</span>`;
+    const flags =
+      (!p.eligible ? '<span class="badge b-bad">below minimum</span>' : '') +
+      ((p.policy_pending||[]).length ? '<span class="badge b-warn">change announced</span>' : '') +
+      (p.committee_ready ? '<span class="badge b-ok">committee</span>' : '') +
+      (!p.policy_in_force ? '<span class="badge">keeps all fees</span>' : '');
+    const open = OPEN === p.signer;
+    return `<tr class="row" data-k="${esc(p.signer)}">
+      <td><span class="key">${esc(shortKey(p.signer))}</span><div style="margin-top:5px">${flags}</div></td>
+      <td class="num">${seq(p.weight)}<div class="meter"><i style="width:${Math.min(100,p.network_share*100)}%"></i></div>
+          <span class="muted">${pct(p.network_share)}</span></td>
+      <td class="num">${seq(p.delegated_weight)}<div class="muted">own ${seq(p.own_weight)}</div></td>
+      <td class="num">${p.delegators}</td>
+      <td class="num">${relCell}</td>
+      <td>${esc(p.payout)}</td>
+    </tr>` + (!open ? '' : `<tr class="detail"><td colspan="6"><div class="dgrid">
+      <div><h4>Signer public key</h4><pre>${esc(p.signer)}</pre></div>
+      <div><h4>Delegate to it</h4><pre>sequentia-cli delegatestake "${esc(p.signer)}"</pre></div>
+      <div><h4>Committed now</h4>${p.policy_in_force
+        ? `<div>${esc(policyLine(p.policy_in_force))}, binding since height
+           ${p.policy_in_force.activation.toLocaleString('en-US')}</div>`
+        + (p.policy_in_force.payout_script
+           ? `<pre>${esc(p.policy_in_force.payout_script)}</pre>` : '')
+        : '<div class="muted">Nothing. This pool keeps every fee the blocks it produces earn.</div>'}</div>
+      <div><h4>Announced, not yet binding</h4>${(p.policy_pending||[]).length
+        ? (p.policy_pending||[]).map(q => `<div>${esc(policyLine(q))} at height
+            ${q.activation.toLocaleString('en-US')}, in
+            ${esc(whenBinds(q.blocks_away, d.block_seconds||60))}</div>`).join('')
+        : '<div class="muted">Nothing announced.</div>'}</div>
+      </div></td></tr>`);
+  }).join('');
+
+  $('rows').querySelectorAll('tr.row').forEach(tr => tr.onclick = () => {
+    OPEN = OPEN === tr.dataset.k ? null : tr.dataset.k;
+    render();
+  });
+
+  const at = new Date((d.generated_at||Date.now()/1000)*1000);
+  $('status').className = 'status';
+  $('status').textContent = `${pools.length} pool(s), read at height ` +
+    `${(d.height||0).toLocaleString('en-US')}, ${at.toLocaleTimeString('en-GB')}. Refreshes every ` +
+    `${REFRESH_MS/1000} seconds. Click a row for the full key and what it has committed to.`;
+}
+
+document.querySelectorAll('th[data-sort]').forEach(th => {
+  if (th.classList.contains('na')) return;
+  th.onclick = () => {
+    const k = th.dataset.sort;
+    SORT = {key:k, desc: SORT.key === k ? !SORT.desc : true};
+    render();
+  };
+});
+
+async function load(){
+  try{
+    const r = await fetch(FEED, {cache:'no-store'});
+    if(!r.ok) throw new Error('feed returned ' + r.status);
+    const j = await r.json();
+    if(j.error) throw new Error(j.error);
+    DATA = j; render();
+  }catch(e){
+    // Keep whatever is on screen: a stale board beats an empty one, as long as
+    // it says it is stale.
+    $('status').className = 'status err';
+    $('status').textContent = DATA
+      ? 'Could not refresh (' + e.message + '). Showing the last reading.'
+      : 'Could not reach the pool feed (' + e.message + ').';
+  }
+}
+load();
+setInterval(load, REFRESH_MS);
+</script>
+</body></html>
