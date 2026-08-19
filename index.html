@@ -109,11 +109,15 @@
     a fixed number of blocks before it can bind, and every announcement in that window is shown at the top of this
     page and inside your own wallet. That waiting period is worth exactly as much as the attention you pay to it,
     which is why leaving is instant: you are meant to have time to read, decide and go.</p>
-    <p><strong>The two committed modes differ in what they guarantee.</strong> A <em>direct</em> policy names an
-    address that every block must pay, so the operator cannot silently redirect the reward, but the chain does not
-    check that the address shares anything with you. A <em>lottery</em> policy makes each block pay one delegator
-    drawn by stake weight from a seed rooted in Bitcoin's proof of work, so the draw cannot be rigged and your
-    share over time is exactly proportional, at the cost of arriving in occasional lumps instead of steadily.</p>
+    <p><strong>The three committed modes differ in what they guarantee.</strong> A <em>split</em> policy pays
+    every delegator its exact proportional share: rewards accumulate in an on-chain pot, and anyone can trigger
+    the distribution, so your payout never depends on the operator staying interested. Its one sharp edge is that
+    leaving the pool forfeits whatever you have accrued but not yet claimed, so claim before you leave. A
+    <em>lottery</em> policy makes each block pay one delegator drawn by stake weight from a seed rooted in
+    Bitcoin's proof of work, so the draw cannot be rigged and your share over time is exactly proportional, at
+    the cost of arriving in occasional lumps instead of steadily. A <em>direct</em> policy names an address that
+    every block must pay, so the operator cannot silently redirect the reward, but the chain does not check that
+    the address shares anything with you.</p>
     <p><strong>Reliability is the number nobody advertises.</strong> A pool holding a tenth of the network's stake
     should produce about a tenth of the blocks. Well under that means it is offline, missing its slots or losing
     races, and its delegators are earning nothing for the weight they lent it.</p>
@@ -140,7 +144,8 @@
     this page: it is what turns "a staker" into "a pool asking for your delegation", and it is the thing a
     delegator is actually trusting.</p>
     <p class="muted">Running headless, with no desktop wallet? The same thing from a node:
-    <code>sequentia-cli announcepayout "lottery" null null null 500</code> announces a lottery keeping 5%.</p>
+    <code>sequentia-cli announcepayout "split" null null null 500</code> announces a proportional split
+    keeping 5%; <code>"lottery"</code> in its place announces a lottery.</p>
   </div>
 
   <h2>Joining a pool</h2>
@@ -198,6 +203,7 @@ function whenBinds(blocksAway, blockSeconds){
 
 function policyLine(p){
   if (p.mode === 'lottery') return `lottery, ${(p.commission_bp/100).toFixed(2)}% commission`;
+  if (p.mode === 'split') return `proportional split, ${(p.commission_bp/100).toFixed(2)}% commission`;
   return `direct, pays a committed script`;
 }
 
@@ -285,6 +291,12 @@ function render(){
         + (p.policy_in_force.payout_script
            ? `<pre>${esc(p.policy_in_force.payout_script)}</pre>` : '')
         : '<div class="muted">Nothing. This pool keeps every fee the blocks it produces earn.</div>'}</div>
+      ${p.policy_in_force && p.policy_in_force.mode === 'split' ? `<div><h4>Accrued, unclaimed pot</h4>${
+        Object.keys(p.pot||{}).length
+          ? Object.entries(p.pot).map(([a,v]) => `<div>${esc(String(v))} of asset <span class="key">${esc(shortKey(a))}</span></div>`).join('')
+            + `<div class="muted">${p.pot_outputs||0} pot output(s). Anyone can trigger the payout with
+               <code>claimpoolrewards</code>; leaving the pool forfeits your unclaimed share.</div>`
+          : '<div class="muted">Nothing unclaimed right now.</div>'}</div>` : ''}
       <div><h4>Announced, not yet binding</h4>${(p.policy_pending||[]).length
         ? (p.policy_pending||[]).map(q => `<div>${esc(policyLine(q))} at height
             ${q.activation.toLocaleString('en-US')}, in
