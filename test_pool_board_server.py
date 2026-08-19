@@ -54,8 +54,11 @@ SAMPLE = {
     "notice_blocks": 2880,
     "block_seconds": 60,
     "window": 500,
+    "declared_pools": 1,
+    "stakers": 2,
     "pools": [{
         "signer": "02" + "ab" * 32,
+        "declared": True,
         "weight": 5000000000000,
         "own_weight": 1000000000000,
         "delegated_weight": 4000000000000,
@@ -70,6 +73,17 @@ SAMPLE = {
         "policy_in_force": {"activation": 90000, "mode": "lottery", "commission_bp": 500},
         "policy_pending": [{"activation": 99000, "mode": "lottery",
                             "commission_bp": 1000, "blocks_away": 3000}],
+    }, {
+        # A staker producing for itself. The feed carries it so a wallet can
+        # look it up; the page must NOT list it as a pool.
+        "signer": "03" + "cd" * 32,
+        "declared": False,
+        "weight": 3000000000000, "own_weight": 3000000000000, "delegated_weight": 0,
+        "delegators": 0, "network_share": 0.375, "eligible": True,
+        "committee_ready": True, "blocks_produced": 180, "blocks_expected": 187.5,
+        "reliability": 0.96,
+        "payout": "no policy committed: this pool keeps everything the blocks it produces earn",
+        "policy_pending": [],
     }],
 }
 
@@ -117,8 +131,13 @@ class TestCache(unittest.TestCase):
         seen = []
         mod.rpc = lambda m, p: (seen.append((m, p)), SAMPLE)[1]
         mod.pools_json()
-        self.assertEqual(seen, [("listpools", [None, 123, False])],
+        self.assertEqual(seen, [("listpools", [None, 123, False, True])],
                          "the feed must issue exactly one fixed query")
+        # include_undeclared is the last argument and is deliberately true: the
+        # PAGE lists only declared pools, but a wallet reading this same feed has
+        # to describe the signer its stake is lent to, which may have declared
+        # nothing. Flipping it would silently make that lookup fail.
+        self.assertIs(seen[0][1][3], True)
 
     def test_generated_at_is_stamped(self):
         mod = load_server(SEQ_POOLS_TTL=60)
@@ -235,15 +254,16 @@ class TestPageContract(unittest.TestCase):
         page = (HERE / "index.html").read_text()
         provided = set(SAMPLE) | {"generated_at"}
         for field in ("height", "network_weight", "min_stake", "notice_blocks",
-                      "block_seconds", "window", "pools", "generated_at"):
+                      "block_seconds", "window", "pools", "generated_at",
+                      "declared_pools", "stakers"):
             self.assertIn(field, provided)
             self.assertIn(field, page, "index.html no longer reads %s" % field)
 
         pool_fields = set(SAMPLE["pools"][0])
-        for field in ("signer", "weight", "own_weight", "delegated_weight", "delegators",
-                      "network_share", "eligible", "committee_ready", "blocks_produced",
-                      "blocks_expected", "reliability", "payout", "policy_in_force",
-                      "policy_pending"):
+        for field in ("signer", "declared", "weight", "own_weight", "delegated_weight",
+                      "delegators", "network_share", "eligible", "committee_ready",
+                      "blocks_produced", "blocks_expected", "reliability", "payout",
+                      "policy_in_force", "policy_pending"):
             self.assertIn(field, pool_fields)
             self.assertIn(field, page, "index.html no longer reads pool.%s" % field)
 

@@ -65,9 +65,14 @@
     <img src="/explorer/img/icons/SequentiaTestnet-menu-logo.svg" alt="Sequentia">
     <h1>Staking <span class="t">pools</span></h1>
   </div>
-  <p class="sub">Every signer producing blocks on the Sequentia network, the stake weight it commands, who lent
-  it, what it has committed on-chain to paying, and how reliably it actually produces. A pool never holds your
-  coins, so what you are choosing here is a block producer, not a custodian.</p>
+  <p class="sub">The staking pools on the Sequentia network: the stake weight each commands, who lent it, what
+  it has committed on-chain to paying, and how reliably it actually produces. A pool never holds your coins, so
+  what you are choosing here is a block producer, not a custodian.</p>
+  <p class="sub"><strong>A pool is a signer that has declared itself one</strong>, by committing a payout policy
+  on-chain. That is the only deliberate opt-in there is, and it is what separates an operator asking for your
+  delegation from the many stakers who simply produce blocks for themselves. You may delegate to any signer, and
+  the chain will not stop you, but a signer that has never made a commitment is not running a pool and is not
+  listed here as though it were.</p>
 
   <div class="stats" id="stats"></div>
   <div id="pending"></div>
@@ -112,6 +117,20 @@
     <p><strong>Reliability is the number nobody advertises.</strong> A pool holding a tenth of the network's stake
     should produce about a tenth of the blocks. Well under that means it is offline, missing its slots or losing
     races, and its delegators are earning nothing for the weight they lent it.</p>
+  </div>
+
+  <h2>Running one</h2>
+  <div class="explain">
+    <p>A staker becomes a pool by committing, on-chain, to how the blocks it produces will pay out. Until it does
+    that it is simply a staker producing for itself, and this page will not list it. From the node wallet's
+    Staking tab, or:</p>
+    <pre>sequentia-cli announcepayout "lottery"          # pays one delegator per block, drawn by stake weight
+sequentia-cli announcepayout "lottery" null null null 500   # ...keeping 5% commission
+sequentia-cli announcepayout "direct"           # pays one committed address every block</pre>
+    <p>The commitment appears here immediately and binds after the chain's notice period, which is the window in
+    which anyone already delegated to you can read it and leave. Announcing is deliberately the only way onto
+    this page: it is what turns "a staker" into "a pool asking for your delegation", and it is the thing a
+    delegator is actually trusting.</p>
   </div>
 
   <h2>Joining a pool</h2>
@@ -177,7 +196,8 @@ function render(){
   const d = DATA, pools = d.pools || [];
 
   $('stats').innerHTML = [
-    ['Pools', pools.length, 'signers commanding weight or committed to a policy'],
+    ['Pools', d.declared_pools ?? pools.length, 'signers that declared themselves one'],
+    ['Other stakers', Math.max(0, (d.stakers ?? 0) - (d.declared_pools ?? 0)), 'producing for themselves, not soliciting delegation'],
     ['Network stake', seq(d.network_weight) + ' SEQ', 'total weight backing block production'],
     ['Minimum to produce', seq(d.min_stake) + ' SEQ', 'weight a signer needs to be eligible'],
     ['Notice period', (d.notice_blocks||0).toLocaleString('en-US') + ' blocks',
@@ -189,7 +209,11 @@ function render(){
 
   // Announced changes still inside their notice window. This is the audit
   // surface the notice period exists for, so it goes above the table, not in it.
-  const changing = pools.filter(p => (p.policy_pending||[]).length);
+  // The board lists pools, not stakers. The feed carries every signer so a
+  // wallet can look up whichever one its stake is lent to; the page shows only
+  // those that declared. Defined before anything reads it.
+  const declared = pools.filter(p => p.declared !== false);
+  const changing = declared.filter(p => (p.policy_pending||[]).length);
   $('pending').innerHTML = !changing.length ? '' :
     `<div class="notice"><h3>Announced changes you can still act on</h3><ul>` +
     changing.map(p => (p.policy_pending||[]).map(q =>
@@ -200,7 +224,7 @@ function render(){
     ).join('')).join('') +
     `</ul></div>`;
 
-  const sorted = pools.slice().sort((a,b) => {
+  const sorted = declared.slice().sort((a,b) => {
     const k = SORT.key;
     // A pool that was owed nothing has no reliability rather than a zero, so
     // sort those to the bottom either way instead of pretending they scored 0.
@@ -209,7 +233,21 @@ function render(){
     return (SORT.desc ? 1 : -1) * (av < bv ? 1 : -1);
   });
 
-  $('rows').innerHTML = sorted.map(p => {
+  if (!sorted.length) {
+    // Not an error, and not an empty network: nobody has opted in yet. Say both,
+    // and say how one appears here, because the page is also read by operators.
+    const others = Math.max(0, (d.stakers ?? 0) - (d.declared_pools ?? 0));
+    $('rows').innerHTML = `<tr><td colspan="6" style="padding:26px 18px">
+      <div style="font-size:16px;color:#fff;margin-bottom:8px">No pool has declared itself yet.</div>
+      <div class="muted" style="max-width:70ch">
+        ${others} signer(s) are producing blocks for themselves right now. They are not listed as pools because
+        none of them has committed a payout policy, and listing a staker as a pool would put words in its mouth.
+        <br><br>
+        An operator appears here by making that commitment on-chain, from the node wallet:
+        <code>sequentia-cli announcepayout "lottery"</code> (or <code>"direct"</code>). It takes effect after the
+        notice period, and shows on this page from the moment it is announced.
+      </div></td></tr>`;
+  } else $('rows').innerHTML = sorted.map(p => {
     const rel = p.reliability;
     const relCell = rel === undefined ? '<span class="muted">not owed any</span>' :
       `${rel.toFixed(2)}<div class="meter"><i style="width:${Math.min(100, rel*100)}%"></i></div>
@@ -252,7 +290,7 @@ function render(){
 
   const at = new Date((d.generated_at||Date.now()/1000)*1000);
   $('status').className = 'status';
-  $('status').textContent = `${pools.length} pool(s), read at height ` +
+  $('status').textContent = `${sorted.length} pool(s) of ${d.stakers ?? pools.length} staker(s), read at height ` +
     `${(d.height||0).toLocaleString('en-US')}, ${at.toLocaleTimeString('en-GB')}. Refreshes every ` +
     `${REFRESH_MS/1000} seconds. Click a row for the full key and what it has committed to.`;
 }
