@@ -151,7 +151,10 @@ check(api.seq(100000000) === '1', 'seq() renders 1e8 atoms as 1');
   await api2.load();
   const empty = n2.rows.innerHTML;
   check(empty.includes('No pool has declared itself yet'), 'an empty board says why it is empty');
-  check(empty.includes('announcepayout'), 'and says how an operator appears on it');
+  // How to appear is the desktop wallet's Staking tab, not a command: the UI
+  // exists, so the page should not teach the CLI first.
+  check(/Staking/.test(empty) && /Run a staking pool/.test(empty),
+    'and says how an operator appears on it, via the wallet');
   check(empty.includes('3 signer(s) are producing blocks'), 'and does not imply the network is empty');
   check(!empty.includes('undefined') && !empty.includes('NaN'), 'the empty state renders cleanly');
 }

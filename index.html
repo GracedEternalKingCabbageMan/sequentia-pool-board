@@ -121,31 +121,41 @@
 
   <h2>Running one</h2>
   <div class="explain">
-    <p>A staker becomes a pool by committing, on-chain, to how the blocks it produces will pay out. Until it does
-    that it is simply a staker producing for itself, and this page will not list it. From the node wallet's
-    Staking tab, or:</p>
-    <pre>sequentia-cli announcepayout "lottery"          # pays one delegator per block, drawn by stake weight
-sequentia-cli announcepayout "lottery" null null null 500   # ...keeping 5% commission
-sequentia-cli announcepayout "direct"           # pays one committed address every block</pre>
+    <p>A staker becomes a pool by committing, on-chain, to how the blocks it produces will pay out. Until it
+    does that it is simply a staker producing for itself, and this page will not list it.</p>
+    <p>Open the desktop wallet's <strong>Staking</strong> tab and use <strong>Run a staking pool</strong>. It
+    offers the usual arrangements to choose from, and spells out what each one means for the people delegating
+    to you before you commit to it:</p>
+    <ul>
+      <li><strong>Share everything.</strong> Each block pays one of your delegators, drawn by stake weight, and
+      you take nothing beyond what your own stake wins as one participant among them.</li>
+      <li><strong>Share, keeping a commission</strong> of 2%, 5% or 10%. Same draw; you keep that share of
+      blocks.</li>
+      <li><strong>Pay one address you commit to</strong>, every block. For paying out by an arrangement of your
+      own. The chain stops you redirecting it silently, but does not check that address shares anything with
+      your delegators, and they can see that.</li>
+    </ul>
     <p>The commitment appears here immediately and binds after the chain's notice period, which is the window in
     which anyone already delegated to you can read it and leave. Announcing is deliberately the only way onto
     this page: it is what turns "a staker" into "a pool asking for your delegation", and it is the thing a
     delegator is actually trusting.</p>
+    <p class="muted">Running headless, with no desktop wallet? The same thing from a node:
+    <code>sequentia-cli announcepayout "lottery" null null null 500</code> announces a lottery keeping 5%.</p>
   </div>
 
   <h2>Joining a pool</h2>
   <div class="explain">
-    <p>From the desktop wallet, open the Staking tab, pick a pool in the "Staking pool" card and click Delegate.
-    From a node, with the pool's signer key from the table above:</p>
-    <pre>sequentia-cli delegatestake "&lt;signer public key&gt;"</pre>
-    <p>Check what you are joining, and what it has announced, before and after:</p>
-    <pre>sequentia-cli listpools          # this page, from your own node
-sequentia-cli listdelegations    # where your stake signs, and any pending change</pre>
-    <p>And to leave, at any moment, without asking anyone:</p>
-    <pre>sequentia-cli undelegatestake</pre>
+    <p>Any Sequentia wallet with a stake can delegate: the desktop wallet, the web wallet, Ambra on Android and
+    Ambra for Chromium. Open its <strong>Staking</strong> tab, pick a pool, and delegate. The same card shows
+    what that pool has committed to, warns you when it announces a change, and lets you leave in one action.</p>
+    <p>Leaving needs nobody's cooperation and has no waiting period, so the button is always there. Moving
+    between pools is one action too, and does not touch your stake.</p>
     <p class="muted">Delegating requires a registered stake. It does not require your wallet to be online
     afterwards, which is the other reason pools exist: the key that can move your coins never has to touch a
     block-producing server.</p>
+    <p class="muted">Running headless? <code>sequentia-cli delegatestake "&lt;signer&gt;"</code> to join,
+    <code>listdelegations</code> to see where your stake signs and what is pending against it, and
+    <code>undelegatestake</code> to leave.</p>
   </div>
 
   <footer>
@@ -243,9 +253,9 @@ function render(){
         ${others} signer(s) are producing blocks for themselves right now. They are not listed as pools because
         none of them has committed a payout policy, and listing a staker as a pool would put words in its mouth.
         <br><br>
-        An operator appears here by making that commitment on-chain, from the node wallet:
-        <code>sequentia-cli announcepayout "lottery"</code> (or <code>"direct"</code>). It takes effect after the
-        notice period, and shows on this page from the moment it is announced.
+        An operator appears here by making that commitment on-chain: open the desktop wallet's
+        <strong>Staking</strong> tab, pick a payout arrangement under "Run a staking pool", and announce it. It
+        shows on this page from the moment it is announced, and takes effect after the notice period.
       </div></td></tr>`;
   } else $('rows').innerHTML = sorted.map(p => {
     const rel = p.reliability;
