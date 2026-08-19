@@ -57,12 +57,11 @@ SEQ_POOLS_PORT=8091 python3 pool-board-server.py
 | `SEQ_POOLS_BIND` | `127.0.0.1` | listen address; keep it loopback behind a front-end |
 | `SEQ_POOLS_PAGE` | *(this directory)* | where `index.html` lives, so the server can serve it too |
 
-The node it reads must have `listpools`, which landed **after** the v24.2.0 tag: a released
-24.2.0 binary does not have it, so this needs a build from `master` at or after
-[Sequentia#124](https://github.com/GracedEternalKingCabbageMan/Sequentia/pull/124) until the
-next release carries it. The node needs no wallet and must not be a block producer: a
-read-only follower is exactly right, and keeping it separate from any node people rely on
-means a board restart cannot disturb them.
+The node it reads must have `listpools`, which ships in **Sequentia Core 24.3.0**. A released
+24.2.0 binary does not have it, so until 24.3.0 is tagged this needs a build from `master`.
+The node needs no wallet and must not be a block producer: a read-only follower is exactly
+right, and keeping it separate from any node people rely on means a board restart cannot
+disturb them.
 
 ## Deploy
 
