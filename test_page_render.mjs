@@ -108,22 +108,26 @@ check(stats.includes('Other stakers'), 'the undeclared stakers are still counted
 check(!rows.includes('undefined') && !stats.includes('undefined'), 'nothing renders as "undefined"');
 check(!rows.includes('NaN') && !stats.includes('NaN') && !pending.includes('NaN'), 'nothing renders as NaN');
 check(status.includes('pool(s)'), 'the status line renders');
+if (!declaredPools.length) {
+  check(rows.includes('No pool has declared itself yet'),
+    'with nothing declared, the board explains itself rather than showing a blank table');
+}
 
 // The honest defaults have to survive rendering; they are the reason the board
 // exists, and a blank column would read as "nothing to worry about".
-if (feed.pools.some(p => !p.policy_in_force)) {
+if (declaredPools.some(p => !p.policy_in_force)) {
   check(rows.includes('keeps everything'), 'a pool with no policy says it keeps everything');
 }
 // A pool producing nothing must show its zero rather than be skipped or blank.
-if (feed.pools.some(p => p.reliability === 0)) {
+if (declaredPools.some(p => p.reliability === 0)) {
   check(/>0\.00</.test(rows) || rows.includes('0.00'), 'a pool at reliability 0 shows it');
 }
 // A pool owed nothing is not "unreliable"; it must not render as 0.00.
-if (feed.pools.some(p => p.reliability === undefined && p.blocks_expected === 0)) {
+if (declaredPools.some(p => p.reliability === undefined && p.blocks_expected === 0)) {
   check(rows.includes('not owed any'), 'a pool owed no blocks is not called unreliable');
 }
 // The audit surface: an announced change belongs above the table with a deadline.
-if (feed.pools.some(p => (p.policy_pending || []).length)) {
+if (declaredPools.some(p => (p.policy_pending || []).length)) {
   check(pending.includes('Announced changes'), 'a pending change is pulled to the top');
   check(/blocks \(about /.test(pending), 'the pending change carries a deadline');
 }
