@@ -116,7 +116,13 @@ def pools_json():
         try:
             # listpools carries everything the board renders, the chain's block
             # cadence included, so this stays one call.
-            data = rpc("listpools", [None, WINDOW, False])
+            #
+            # include_undeclared: the PAGE shows only signers that declared
+            # themselves a pool, but a wallet reading this same feed also has to
+            # describe the signer its stake is lent to, which may have declared
+            # nothing at all. One fetch serves both; every entry carries
+            # `declared`, and the page filters on it.
+            data = rpc("listpools", [None, WINDOW, False, True])
         except Exception:
             if _cache["body"] is not None and now - _cache["at"] < STALE_OK:
                 return _cache["body"]

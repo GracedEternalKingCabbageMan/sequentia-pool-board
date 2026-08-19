@@ -28,10 +28,13 @@ const FIXTURE = {
   notice_blocks: 1440,
   block_seconds: 60,
   window: 500,
+  declared_pools: 1,
+  stakers: 3,
   generated_at: Math.floor(Date.now() / 1000),
   pools: [
     {
       signer: '02' + 'ab'.repeat(32),
+      declared: true,
       weight: 5000000000000, own_weight: 1000000000000, delegated_weight: 4000000000000,
       delegators: 3, network_share: 0.625, eligible: true, committee_ready: true,
       blocks_produced: 310, blocks_expected: 312.5, reliability: 0.992,
@@ -40,7 +43,10 @@ const FIXTURE = {
       policy_pending: [{ activation: 99000, mode: 'lottery', commission_bp: 1000, blocks_away: 3000 }],
     },
     {
+      // A staker producing for itself: carried by the feed so a wallet can look
+      // it up, and deliberately NOT shown on the board as a pool.
       signer: '03' + 'cd'.repeat(32),
+      declared: false,
       weight: 2000000000000, own_weight: 2000000000000, delegated_weight: 0,
       delegators: 0, network_share: 0.25, eligible: true, committee_ready: false,
       blocks_produced: 0, blocks_expected: 125.0, reliability: 0,
@@ -49,6 +55,7 @@ const FIXTURE = {
     },
     {
       signer: '02' + 'ef'.repeat(32),
+      declared: true,
       weight: 0, own_weight: 0, delegated_weight: 0,
       delegators: 0, network_share: 0, eligible: false, committee_ready: false,
       blocks_produced: 0, blocks_expected: 0,
@@ -90,8 +97,14 @@ const check = (cond, what) => {
 
 check(stats.includes('Network stake'), 'stat tiles render');
 check(stats.includes('Notice period'), 'the notice period is shown');
-check((rows.match(/<tr class="row"/g) || []).length === feed.pools.length,
-  `one row per pool (${feed.pools.length})`);
+const declaredPools = feed.pools.filter((p) => p.declared !== false);
+check((rows.match(/<tr class="row"/g) || []).length === declaredPools.length,
+  `one row per DECLARED pool (${declaredPools.length} of ${feed.pools.length} signers)`);
+for (const p of feed.pools.filter((x) => x.declared === false)) {
+  check(!rows.includes(p.signer.slice(0, 10)),
+    'a staker that never declared is not listed as a pool');
+}
+check(stats.includes('Other stakers'), 'the undeclared stakers are still counted');
 check(!rows.includes('undefined') && !stats.includes('undefined'), 'nothing renders as "undefined"');
 check(!rows.includes('NaN') && !stats.includes('NaN') && !pending.includes('NaN'), 'nothing renders as NaN');
 check(status.includes('pool(s)'), 'the status line renders');
@@ -117,6 +130,27 @@ if (feed.pools.some(p => (p.policy_pending || []).length)) {
 
 check(/blocks \(about /.test(api.whenBinds(1440, feed.block_seconds)), 'whenBinds renders a deadline');
 check(api.seq(100000000) === '1', 'seq() renders 1e8 atoms as 1');
+
+
+// The empty board is the state the live chain is in until someone declares, so
+// it has to explain itself rather than look broken or look like an empty network.
+{
+  const emptyFeed = { ...FIXTURE, declared_pools: 0, stakers: 3,
+                      pools: FIXTURE.pools.map((p) => ({ ...p, declared: false })) };
+  const n2 = {};
+  const mk2 = (id) => (n2[id] = { id, innerHTML: '', textContent: '', className: '', querySelectorAll: () => [] });
+  ['stats', 'pending', 'rows', 'status', 'tbl'].forEach(mk2);
+  const api2 = new Function('document', 'fetch', 'setInterval', 'console',
+    script + '\nreturn {render, load};')(
+    { getElementById: (id) => n2[id] || mk2(id), querySelectorAll: () => [] },
+    async () => ({ ok: true, json: async () => emptyFeed }), () => 0, console);
+  await api2.load();
+  const empty = n2.rows.innerHTML;
+  check(empty.includes('No pool has declared itself yet'), 'an empty board says why it is empty');
+  check(empty.includes('announcepayout'), 'and says how an operator appears on it');
+  check(empty.includes('3 signer(s) are producing blocks'), 'and does not imply the network is empty');
+  check(!empty.includes('undefined') && !empty.includes('NaN'), 'the empty state renders cleanly');
+}
 
 console.log(failures ? `\n${failures} FAILED` : '\nPAGE RENDER OK');
 process.exit(failures ? 1 : 0);
