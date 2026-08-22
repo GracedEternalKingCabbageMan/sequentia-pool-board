@@ -11,7 +11,9 @@ Two files, no build step:
 - [`index.html`](index.html) — the whole page. Inline CSS and JS, no external assets,
   styled to match the rest of the site.
 - [`pool-board-server.py`](pool-board-server.py) — the one thing a static page cannot do,
-  which is read a node. Serves `listpools` as `GET /pools.json`, cached.
+  which is read a node. Serves `listpools` as `GET /pools.json` (also accepted as
+  `/pools/pools.json`), cached, plus the page itself at `/` and a `/healthz` liveness
+  check that never touches the node.
 
 ## What it is for
 
@@ -48,7 +50,7 @@ SEQ_POOLS_PORT=8091 python3 pool-board-server.py
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `SEQ_RPC_URL` | `http://127.0.0.1:7041` | node RPC endpoint |
+| `SEQ_RPC_URL` | `http://127.0.0.1:7041` | node RPC endpoint. The default is the testnet box's custom port; a stock node on `chain=test` listens on `18776`, so set this unless your node runs with `-rpcport=7041`. |
 | `SEQ_RPC_COOKIE` | *(none)* | path to the node's `.cookie` (preferred). On `chain=test` the node writes it to `<datadir>/testnet3/.cookie`, not `<datadir>/test/`. |
 | `SEQ_RPC_USER` / `SEQ_RPC_PASSWORD` | *(none)* | RPC credentials, when not using a cookie |
 | `SEQ_POOLS_WINDOW` | `500` | blocks to measure production reliability over |
@@ -57,8 +59,8 @@ SEQ_POOLS_PORT=8091 python3 pool-board-server.py
 | `SEQ_POOLS_BIND` | `127.0.0.1` | listen address; keep it loopback behind a front-end |
 | `SEQ_POOLS_PAGE` | *(this directory)* | where `index.html` lives, so the server can serve it too |
 
-The node it reads must have `listpools`, which ships in **Sequentia Core 24.3.0**. A released
-24.2.0 binary does not have it, so until 24.3.0 is tagged this needs a build from `master`.
+The node it reads must be **Sequentia Core 24.3.0 or later** (`listpools` first shipped
+there; the current release is 24.5.2).
 The node needs no wallet and must not be a block producer: a read-only follower is exactly
 right, and keeping it separate from any node people rely on means a board restart cannot
 disturb them.
@@ -76,8 +78,10 @@ handle_path /pools/* {
 ```
 
 `handle_path` strips the prefix, so the service sees `/` for the page and `/pools.json` for
-the feed; it answers both. Run it under systemd so it comes back after a reboot. It holds no
-state and can be restarted freely.
+the feed; it answers both, and also the unstripped `/pools/` and `/pools/pools.json`, so a
+front-end that keeps the prefix works too. `GET /healthz` answers `ok` without calling the
+node, for uptime checks. Run it under systemd so it comes back after a reboot (no unit is
+committed here). It holds no state and can be restarted freely.
 
 ## Tests
 
