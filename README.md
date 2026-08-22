@@ -50,7 +50,7 @@ SEQ_POOLS_PORT=8091 python3 pool-board-server.py
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `SEQ_RPC_URL` | `http://127.0.0.1:7041` | node RPC endpoint. The default is the testnet box's custom port; a stock node on `chain=test` listens on `18776`, so set this unless your node runs with `-rpcport=7041`. |
+| `SEQ_RPC_URL` | `http://127.0.0.1:18776` | node RPC endpoint. The default is the stock `chain=test` port; the testnet box runs its own follower node on 18411 and sets `SEQ_RPC_URL` in the unit. |
 | `SEQ_RPC_COOKIE` | *(none)* | path to the node's `.cookie` (preferred). On `chain=test` the node writes it to `<datadir>/testnet3/.cookie`, not `<datadir>/test/`. |
 | `SEQ_RPC_USER` / `SEQ_RPC_PASSWORD` | *(none)* | RPC credentials, when not using a cookie |
 | `SEQ_POOLS_WINDOW` | `500` | blocks to measure production reliability over |

@@ -18,7 +18,7 @@ at a time: a burst of viewers arriving together produces one node call, not one
 each, so a slow node cannot be turned into a queue of concurrent RPCs.
 
 Configuration, all optional:
-  SEQ_RPC_URL       node RPC endpoint (default http://127.0.0.1:7041)
+  SEQ_RPC_URL       node RPC endpoint (default http://127.0.0.1:18776)
   SEQ_RPC_COOKIE    path to the node's .cookie file (preferred over user/pass)
   SEQ_RPC_USER      RPC username, when not using a cookie
   SEQ_RPC_PASSWORD  RPC password, when not using a cookie
@@ -43,7 +43,7 @@ import urllib.request
 from base64 import b64encode
 from pathlib import Path
 
-RPC_URL = os.environ.get("SEQ_RPC_URL", "http://127.0.0.1:7041")
+RPC_URL = os.environ.get("SEQ_RPC_URL", "http://127.0.0.1:18776")
 RPC_COOKIE = os.environ.get("SEQ_RPC_COOKIE", "")
 RPC_USER = os.environ.get("SEQ_RPC_USER", "")
 RPC_PASSWORD = os.environ.get("SEQ_RPC_PASSWORD", "")
