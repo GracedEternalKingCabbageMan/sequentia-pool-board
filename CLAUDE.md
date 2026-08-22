@@ -1,6 +1,6 @@
 # Working on the Sequentia staking pool board
 
-Two files and a test. Keep it that way.
+Two files and two tests. Keep it that way.
 
 ## What this repo is
 
@@ -20,8 +20,10 @@ node, and no node URL, credential or stack trace may ever reach a caller. Both d
 are covered by tests; keep them covered.
 
 **The page must stay honest about what the chain does and does not enforce.** A pool that
-has committed to nothing keeps every fee, `direct` mode stops a silent redirect but does
-not make a payout fair, and a `lottery` share is exact over time but lumpy. Do not let
+has committed to nothing keeps every fee. Of the three committed modes, a `split` policy
+pays exact proportional shares from an on-chain pot (anyone can trigger the distribution,
+but leaving forfeits what is accrued and unclaimed), a `lottery` share is exact over time
+but lumpy, and `direct` stops a silent redirect but does not make a payout fair. Do not let
 marketing language creep in: the whole reason the board exists is that a delegator can
 check these things.
 
@@ -52,8 +54,8 @@ page is public.
 ## Deploy
 
 The box pulls from GitHub, always. Never edit these files on the server and never copy them
-there from a workstation. See [README.md](README.md) for the Caddy route and the systemd
-unit.
+there from a workstation. See [README.md](README.md) for the Caddy route; the service runs
+under systemd on the box, but no unit is committed here.
 
 <!-- BEGIN SHARED AGENT CONVENTIONS: identical in every Sequentia repo. Change it in all of them together. -->
 ## Working with git and GitHub here
